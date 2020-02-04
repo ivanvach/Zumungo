@@ -70,3 +70,24 @@ Zumungo covers three major application areas for now and more are on its way.
 - Call ALL feature to locate multiple boards or recover forgotten IP address of the board			
 - Well documented in English			
 - Designed in the USA
+
+PRE-REQUISITES
+
+1. Your own ESP8266 or ESP32 based board.
+2. For the Relays the board should be equipped with relays or use external "dumb" relay board in addition to your ESP board
+3. For Matrix/sensors - have Matrix keypad and/or sensors that produce on/off signal. 
+4. For stepper motor - setpper motor power control unit and stepper motor
+5. Arduino IDE software to compile and flash
+6. USB to serial adapter if your board doesn't have one built-in (most ESP8266 boards don't while most ESP32 boards do have it)
+
+DOWNLOADING INSTRUCTIONS
+
+1. Change the 3 lines in the Installer's source code per the embedded instructions.
+2. Compile and flash the Installer in your Esp8266 or ESp32 board.
+3. Restart the board and wait 1 minute for the board to download the software OTA.
+4. Look for WiFi network named Zumungo XXXXXXX where  6 letter XXXXXXX is your unique board ID.
+5. Go to zumungo.com "buy" section and purchase the product. 
+FREE 15 days TRIAL IS AVAILABLE NO CREDIT CARD IS REQUIRED
+6. In your router find the IP address of a device with MAC address ending with the 6 characters that are your board ID (see above).
+7. Go to the IP address to setup your board and start using it immediately. 
+
