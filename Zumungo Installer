@@ -1,0 +1,188 @@
+/*
+  This INSTALLER will install any of the zumungo software products available at zumungo.com
+  zumungo.com offers advanced software for WiFi control of multiple relays, stepper motors, sensors and keypads
+  free trial, no credit card required is available for all products
+  
+  IMPORTANT Please pick the software (Project_X) and insert your WiFi Network name and password in the code below between the " " quote marks without any spaces or any extra characters.
+  
+  Project_X, where  X = R for WiFi Relays
+                    X = M for WiFi Matrix keypad + Sensors 
+                    X = S for WiFi Stepper Motors
+  
+   
+  Flash this INSTALLER into your ESP32 or ESP8266 board and follow the instructions at zumungo.com/get-started
+
+*/
+
+#define PROJECT_R "http://www.zumungo.com/wp-content/uploads/firmware/ProjectR.bin"
+#define PROJECT_M "http://www.zumungo.com/wp-content/uploads/firmware/ProjectM.bin"
+#define PROJECT_S "http://www.zumungo.com/wp-content/uploads/firmware/ProjectS.bin"
+
+
+/*********************************************************
+Modification by user needed here
+********************************************************/
+
+String strProjectPath = PROJECT_X; /* Replace X here with R, M or S see explanation above */
+String STA_ssid = ""; /* Insert the name of your WiFi Network between the quotes " " here no spaces */
+String STA_pass = ""; /* Insert the password for your WiFi Network here between the quotes " " no spaces */
+
+/* *************************************************************************************** */
+
+
+
+#if defined(ESP32)
+  #include <HTTPUpdate.h>
+  #include <WiFi.h>
+  #include "SPIFFS.h"
+#elif defined(ESP8266)
+  #include <ESP8266httpUpdate.h>
+  #include <ESP8266WiFi.h>
+  #include "FS.h"
+#endif
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println();
+  Serial.println(F("Started!"));
+
+  Serial.println(F("Clear memory!"));
+  if (!SPIFFS.begin(true)) {
+    Serial.println("An Error has occurred while mounting SPIFFS");
+  }
+  else
+  {
+    if (!SPIFFS.format())
+      Serial.println("\n\nError formatting");
+    else
+      Serial.println(F("Memory cleared"));
+  }
+    
+  setupWiFi();
+
+  if ((strProjectPath == PROJECT_R) || (strProjectPath == PROJECT_M) || (strProjectPath == PROJECT_S))
+    processOTA(strProjectPath);
+  else
+  {
+    Serial.println("ERROR: Incorrect path is selected");
+    Reboot();
+  }
+}
+
+void loop() {
+
+}
+
+/*********************************************************
+ * Setup WiFi
+ ********************************************************/
+void setupWiFi()
+{
+  if (STA_ssid == "")
+  {
+    Serial.println("WiFi SSID not set");
+    return;
+  }
+  WiFi.mode(WIFI_STA);
+  WiFi.persistent(false);
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(STA_ssid);
+
+  WiFi.begin(STA_ssid.c_str(), STA_pass.c_str());
+  // return;
+  int attempt = 0;
+  
+  uint32_t ntick = millis();
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(250);
+    Serial.print(".");
+    attempt++;
+    if (attempt == 20)
+    {
+      Serial.println();
+      Serial.println("Connecting: new attempt");
+      WiFi.begin(STA_ssid.c_str(), STA_pass.c_str());
+      attempt = 0;
+    }
+
+    if ((ntick + 20000) < millis()) // 5sec
+    {
+      Serial.println("Can't establish WiFi connection");
+      break;
+    }
+  }
+  
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    Serial.println("");
+    Serial.println("WiFi connected");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+
+    saveWiFiCredentials();
+  }
+  else
+  {
+    Reboot();
+  }
+}
+
+/*********************************************************
+ * Save WiFi credentials for Zumungo library.
+ ********************************************************/
+void saveWiFiCredentials()
+{
+  if (SPIFFS.begin(true)) {
+    File configFile = SPIFFS.open("/WiFi.conf", "w");
+    if (configFile) {
+      configFile.println(STA_ssid);
+      configFile.println(STA_pass);
+      Serial.println("WiFi credentials have been saved");
+    }
+  }
+}
+
+/*********************************************************
+ * Perform OTA update
+ ********************************************************/
+void processOTA(String strUpdateUrl)
+{
+  Serial.println(strUpdateUrl);
+  Serial.println(F("Begin OTA process"));
+#if defined(ESP8266)
+  t_httpUpdate_return ret = ESPhttpUpdate.update(strUpdateUrl + "_esp8266");
+#elif defined(ESP32)
+  WiFiClient client;
+  #define ESPhttpUpdate httpUpdate
+  t_httpUpdate_return ret = ESPhttpUpdate.update( client, strUpdateUrl + "_esp32" );
+#endif
+
+
+  switch(ret) {
+    case HTTP_UPDATE_FAILED:
+      Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\r\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+      break;
+
+    case HTTP_UPDATE_NO_UPDATES:
+      Serial.println("HTTP_UPDATE_NO_UPDATES\r\n");
+      break;
+
+    case HTTP_UPDATE_OK:
+      Serial.println("HTTP_UPDATE_OK\r\n");
+      break;
+  }
+  Serial.println("OTA finished");
+  if (ret == HTTP_UPDATE_FAILED || (ret == HTTP_UPDATE_OK))
+  {
+    Reboot();
+  }
+}
+
+void Reboot()
+{
+  Serial.println(F("ESP restarts..."));
+  delay(1000);
+  ESP.restart();
+}
