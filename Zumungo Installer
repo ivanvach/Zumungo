@@ -1,20 +1,27 @@
 /*
   This INSTALLER will install any of the zumungo software products available at zumungo.com
-  zumungo.com offers advanced software for WiFi control of multiple relays, stepper motors, sensors and keypads
+  zumungo.com offers advanced software for WiFi control of multiple relays, stepper motors and keypads
   free trial, no credit card required is available for all products
   
   IMPORTANT Please pick the software (Project_X) and insert your WiFi Network name and password in the code below between the " " quote marks without any spaces or any extra characters.
   
   Project_X, where  X = R for WiFi Relays
-                    X = M for WiFi Matrix keypad + Sensors 
+                    X = R1 for WiFi Relays with 1wire temperature sensors
+                    X = M for WiFi Matrix keypad
                     X = S for WiFi Stepper Motors
   
-   
+  Example (replace the words in quotes with your own and X with 1 letter as described above) :
+  
+  String strProjectPath = PROJECT_X (Replace X here with R, M or S see above)
+  String STA_ssid = "YourWiFiNamehere"
+  String STA_pass = "yourpasswordhere"
+  
   Flash this INSTALLER into your ESP32 or ESP8266 board and follow the instructions at zumungo.com/get-started
 
 */
 
 #define PROJECT_R "http://www.zumungo.com/wp-content/uploads/firmware/ProjectR.bin"
+#define PROJECT_R1 "http://www.zumungo.com/wp-content/uploads/firmware/ProjectR1.bin"
 #define PROJECT_M "http://www.zumungo.com/wp-content/uploads/firmware/ProjectM.bin"
 #define PROJECT_S "http://www.zumungo.com/wp-content/uploads/firmware/ProjectS.bin"
 
@@ -23,9 +30,9 @@
 Modification by user needed here
 ********************************************************/
 
-String strProjectPath = PROJECT_X; /* Replace X here with R, M or S see explanation above */
-String STA_ssid = ""; /* Insert the name of your WiFi Network between the quotes " " here no spaces */
-String STA_pass = ""; /* Insert the password for your WiFi Network here between the quotes " " no spaces */
+String strProjectPath = PROJECT_X; /* Replace X here with R, R1, M or S see explanation above */
+String STA_ssid = "YourWiFiNamehere"; /* Insert the name of your WiFi Network between the quotes " " here no spaces */
+String STA_pass = "yourpasswordhere"; /* Insert the password for your WiFi Network here between the quotes " " no spaces */
 
 /* *************************************************************************************** */
 
@@ -47,7 +54,13 @@ void setup() {
   Serial.println(F("Started!"));
 
   Serial.println(F("Clear memory!"));
-  if (!SPIFFS.begin(true)) {
+  
+  #if defined(ESP32)
+  if (!SPIFFS.begin(true))
+  #elif defined(ESP8266)
+    if (!SPIFFS.begin())
+  #endif
+  {
     Serial.println("An Error has occurred while mounting SPIFFS");
   }
   else
@@ -60,7 +73,7 @@ void setup() {
     
   setupWiFi();
 
-  if ((strProjectPath == PROJECT_R) || (strProjectPath == PROJECT_M) || (strProjectPath == PROJECT_S))
+  if ((strProjectPath == PROJECT_R) || (strProjectPath == PROJECT_R1) || (strProjectPath == PROJECT_M) || (strProjectPath == PROJECT_S))
     processOTA(strProjectPath);
   else
   {
@@ -134,7 +147,12 @@ void setupWiFi()
  ********************************************************/
 void saveWiFiCredentials()
 {
-  if (SPIFFS.begin(true)) {
+#if defined(ESP32)
+  if (SPIFFS.begin(true))
+#elif defined(ESP8266)
+  if (SPIFFS.begin())
+#endif
+  {
     File configFile = SPIFFS.open("/WiFi.conf", "w");
     if (configFile) {
       configFile.println(STA_ssid);
